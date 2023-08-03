@@ -19,7 +19,6 @@ def check_entries():
 
 
 # Function to solve the problem
-
 def solve():
     if not check_entries():
         showerror("Info", "S’il vous plaît remplir tous les champs.")
@@ -74,15 +73,26 @@ def solve():
                 max_y = max(max_y, equation[2] / equation[1])
 
         # Set a minimum value for max_x and max_y to avoid division by zero
-        max_x = max(max_x, 1)
-        max_y = max(max_y, 1)
+        # max_x = max(max_x, 1)
+        # max_y = max(max_y, 1)
+        #
+        # # Set the axis limits based on max_x and max_y
+        # ax.set_xlim(0, max_x * 1.1)
+        # ax.set_ylim(0, max_y * 1.1)
 
-        # Set the axis limits based on max_x and max_y
+        # Determine the maximum value of x and y from the optimal solution
+        optimal_x = pulp.value(x)
+        optimal_y = pulp.value(y)
+        max_x = max(max_x, optimal_x)
+        max_y = max(max_y, optimal_y)
+
+        # Adjust the axis limits to include the optimal solution
         ax.set_xlim(0, max_x * 1.1)
         ax.set_ylim(0, max_y * 1.1)
 
         # Plot the constraint lines and shade the infeasible regions
         x_vals = [0, max_x]
+        # x_vals = [-25, 25]
         for equation in equations:
             if equation[1] != 0:
                 y_vals = [(equation[2] - equation[0] * x) / equation[1] for x in x_vals]
@@ -98,34 +108,51 @@ def solve():
                 else:
                     ax.fill_betweenx([0, max_y], 0, equation[2] / equation[0], color='gray', alpha=0.5)
 
+        # Plot the objective function line
+        if c[1] != 0:
+            y_vals = [-(c[0] * x_val) / c[1] for x_val in x_vals]
+            # y_vals = [-25, 25]
+            ax.plot(x_vals, y_vals, 'r-', label='Fonction objectif')
+        else:
+            ax.axvline(pulp.value(prob.objective) / c[0], color='r', label='Fonction objectif')
+
         # Plot the optimal solution point
         if prob.status == 1:
-            ax.plot(pulp.value(x), pulp.value(y), 'bo', label='Optimal Solution')
+            ax.plot(pulp.value(x), pulp.value(y), 'bo', label='Solution optimal')
             ax.annotate(f'({pulp.value(x):.2f}, {pulp.value(y):.2f})', (pulp.value(x), pulp.value(y)),
                         textcoords="offset points", xytext=(0, 10), ha='center')
 
-            # Plot the objective function line
+            # Plot the parallel lines from the objective function to the optimal solution
             if c[1] != 0:
-                z_vals = [pulp.value(prob.objective), pulp.value(prob.objective) + max_x * c[0]]
-                y_vals = [(z - c[0] * x) / c[1] for z, x in zip(z_vals, x_vals)]
-                ax.plot(x_vals, y_vals, 'r-', label='Objective Function')
+                slope = -c[0] / c[1]
+                intercept = pulp.value(prob.objective) / c[1]
+                y_vals_parallel = [slope * x_val + intercept for x_val in x_vals]
+                ax.plot(x_vals, y_vals_parallel, 'g--', label='Ligne Parallelle')
             else:
-                ax.axvline(pulp.value(prob.objective) / c[0], color='r', label='Objective Function')
+                optimal_x = pulp.value(prob.objective) / c[0]
+                ax.axvline(optimal_x, color='g', linestyle='--', label='Ligne Parallelle')
+
         else:
-            ax.text(0.5, 0.6, 'No optimal solution', ha='center', va='center', transform=ax.transAxes)
+            ax.text(0.5, 0.6, 'Pas de solution optimale', ha='center', va='center', transform=ax.transAxes)
 
         # Set the axis labels
         ax.set_xlabel('x1')
         ax.set_ylabel('x2')
 
         # Set the title and legend
-        ax.set_title('Feasible Region and Optimal Solution')
+        ax.set_title('Region et Solution optimale')
         ax.legend()
 
         # Create a FigureCanvasTkAgg object to display the plot
         canvas = FigureCanvasTkAgg(fig, master=result_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(side=BOTTOM, fill=BOTH, expand=1)
+
+        # Display the objective function equation and the optimal solution
+        eq_str = f"{c[0]}x + {c[1]}y = {pulp.value(prob.objective)}"
+        solution_str = f"Solution optimal: ({pulp.value(x):.2f}, {pulp.value(y):.2f})"
+        Label(result_frame, text=eq_str).pack()
+        Label(result_frame, text=solution_str).pack()
 
 
 # Create the main window
@@ -163,12 +190,12 @@ equations_entries = []
 add_eq_button = Button(input_frame, text="Add Equation")
 
 # Button to delete the last equation entry
-del_eq_button = Button(input_frame, text="Delete Equation")
+del_eq_button = Button(input_frame, text="Supprimer Equation")
 
 # Button to solve the problem
-solve_button = Button(input_frame, text="Solve", command=solve)
+solve_button = Button(input_frame, text="Resoudre", command=solve)
 
-clear_button = Button(input_frame, text="Clear All")
+clear_button = Button(input_frame, text="Tout effacer")
 
 
 # Function to add another equation entry
