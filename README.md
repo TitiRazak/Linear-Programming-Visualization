@@ -54,7 +54,7 @@ cd linear-programming-visualization
 3. Run the main Python script:
 
 ```bash
-python linear_programming_visualization.py
+python main.py
 ```
 
 This will launch the graphical interface where you can define your linear programming problem and visualize the results.
